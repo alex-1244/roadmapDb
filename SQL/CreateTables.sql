@@ -28,6 +28,18 @@ BEGIN
 		DROP CONSTRAINT Fk_Users
 END
 
+IF OBJECT_ID(N'dbo.[UserRoles]', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.[UserRoles]
+		DROP CONSTRAINT Fk_UserRoles_User
+END
+
+IF OBJECT_ID(N'dbo.[UserGroups]', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.[UserGroups]
+		DROP CONSTRAINT Fk_UserGroups_User
+END
+
 DROP TABLE IF EXISTS dbo.Users;
 
 CREATE TABLE [Users](
@@ -39,9 +51,29 @@ CREATE TABLE [Users](
 	CONSTRAINT Pk_Users PRIMARY KEY (Id)
 )
 
+IF OBJECT_ID(N'dbo.[BlogPostsLocalized]', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.[BlogPostsLocalized]
+		DROP CONSTRAINT Fk_Languages
+END
+
+DROP TABLE IF EXISTS dbo.[Languages];
+
+CREATE TABLE [Languages](
+	Id int NOT NULL IDENTITY(1,1),
+	LanguageCode nvarchar(6) NOT NULL,
+	CONSTRAINT Pk_Languages PRIMARY KEY(Id)
+)
+
+IF OBJECT_ID(N'dbo.[BlogPostsLocalized]', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.[BlogPostsLocalized]
+		DROP CONSTRAINT Fk_BlogPosts
+END
+
 DROP TABLE IF EXISTS dbo.[BlogPosts]; 
 
-CREATE TABLE BlogPosts(
+CREATE TABLE [BlogPosts](
 	Id int NOT NULL IDENTITY(1,1),
 	AuthorId int NOT NULL,
 	Date DateTime2 NOT NULL,
@@ -50,17 +82,35 @@ CREATE TABLE BlogPosts(
 	CONSTRAINT Fk_Users FOREIGN KEY (AuthorId) REFERENCES Users(Id)
 );
 
+DROP TABLE IF EXISTS dbo.[BlogPostsLocalized]
+
+CREATE TABLE [BlogPostsLocalized](
+	BlogPostId int NOT NULL,
+	LanguageId int NOT NULL,
+	Title nvarchar(MAX) NOT NULL,
+	Body nvarchar(MAX) NOT NULL,
+	CONSTRAINT Fk_BlogPosts FOREIGN KEY (BlogPostId) REFERENCES BlogPosts(Id) ON DELETE CASCADE,
+	CONSTRAINT Fk_Languages FOREIGN KEY (LanguageId) REFERENCES Languages(Id) ON DELETE CASCADE
+)
+
 IF OBJECT_ID(N'dbo.[GroupRoles]', N'U') IS NOT NULL
 BEGIN
     ALTER TABLE dbo.[GroupRoles]
 		DROP CONSTRAINT fk_Groups
 END
 
+IF OBJECT_ID(N'dbo.[UserGroups]', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.[UserGroups]
+		DROP CONSTRAINT Fk_UserGroups_Group
+END
+
 DROP TABLE IF EXISTS dbo.Groups;
 
 CREATE TABLE [Groups](
 	Id int NOT NULL IDENTITY(1,1),
-	ParentGroupId int
+	ParentGroupId int,
+	Name nvarchar(50) NOT NULL,
 	CONSTRAINT Pk_Groups PRIMARY KEY (Id),
 	CONSTRAINT Fk_Groups_ParentGroup FOREIGN KEY (ParentGroupId) REFERENCES Groups(Id)
 )
@@ -84,6 +134,12 @@ IF OBJECT_ID(N'dbo.[GroupRoles]', N'U') IS NOT NULL
 BEGIN
     ALTER TABLE dbo.[GroupRoles]
 		DROP CONSTRAINT Fk_GroupRoles
+END
+
+IF OBJECT_ID(N'dbo.[UserRoles]', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.[UserRoles]
+		DROP CONSTRAINT Fk_UserRoles_Role
 END
 
 DROP TABLE IF EXISTS dbo.Roles;
@@ -111,10 +167,10 @@ CREATE TABLE [Permissions](
 DROP TABLE IF EXISTS dbo.RolesPermissions
 
 CREATE TABLE [RolesPermissions](
-	UserRoleId int NOT NULL,
+	RoleId int NOT NULL,
 	PermissionId int NOT NULL,
 	IsAllowed bit NOT NULL,
-	CONSTRAINT Fk_Roles FOREIGN KEY (UserRoleId) REFERENCES Roles(Id),
+	CONSTRAINT Fk_Roles FOREIGN KEY (RoleId) REFERENCES Roles(Id),
 	CONSTRAINT Fk_Permissions FOREIGN KEY (PermissionId) REFERENCES [Permissions](Id),
 )
 
@@ -125,4 +181,22 @@ CREATE TABLE [GroupRoles](
 	RoleId int NOT NULL,
 	CONSTRAINT Fk_Groups FOREIGN KEY (GroupId) REFERENCES Groups(Id),
 	CONSTRAINT Fk_GroupRoles FOREIGN KEY (RoleId) REFERENCES Roles(Id),
+)
+
+DROP TABLE IF EXISTS dbo.UserRoles;
+
+CREATE TABLE [UserRoles](
+	UserId int NOT NULL,
+	RoleId int NOT NULL,
+	CONSTRAINT Fk_UserRoles_User FOREIGN KEY (UserId) REFERENCES Users(Id),
+	CONSTRAINT Fk_UserRoles_Role FOREIGN KEY (RoleId) REFERENCES Roles(Id)
+)
+
+DROP TABLE IF EXISTS dbo.UserGroups;
+
+CREATE TABLE [UserGroups](
+	UserId int NOT NULL,
+	GroupId int NOT NULL,
+	CONSTRAINT Fk_UserGroups_User FOREIGN KEY (UserId) REFERENCES Users(Id),
+	CONSTRAINT Fk_UserGroups_Group FOREIGN KEY (GroupId) REFERENCES Groups(Id)
 )
