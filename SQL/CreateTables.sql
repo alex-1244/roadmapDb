@@ -60,9 +60,8 @@ END
 DROP TABLE IF EXISTS dbo.[Languages];
 
 CREATE TABLE [Languages](
-	Id int NOT NULL IDENTITY(1,1),
 	LanguageCode nvarchar(6) NOT NULL,
-	CONSTRAINT Pk_Languages PRIMARY KEY(Id)
+	CONSTRAINT Pk_Languages PRIMARY KEY(LanguageCode)
 )
 
 IF OBJECT_ID(N'dbo.[BlogPostsLocalized]', N'U') IS NOT NULL
@@ -86,11 +85,11 @@ DROP TABLE IF EXISTS dbo.[BlogPostsLocalized]
 
 CREATE TABLE [BlogPostsLocalized](
 	BlogPostId int NOT NULL,
-	LanguageId int NOT NULL,
+	LanguageCode nvarchar(6) NOT NULL,
 	Title nvarchar(MAX) NOT NULL,
 	Body nvarchar(MAX) NOT NULL,
 	CONSTRAINT Fk_BlogPosts FOREIGN KEY (BlogPostId) REFERENCES BlogPosts(Id) ON DELETE CASCADE,
-	CONSTRAINT Fk_Languages FOREIGN KEY (LanguageId) REFERENCES Languages(Id) ON DELETE CASCADE
+	CONSTRAINT Fk_Languages FOREIGN KEY (LanguageCode) REFERENCES Languages(LanguageCode) ON DELETE CASCADE
 )
 
 IF OBJECT_ID(N'dbo.[GroupRoles]', N'U') IS NOT NULL
