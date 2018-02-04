@@ -1,4 +1,6 @@
-﻿DELETE FROM BlogPostsLocalized;
+﻿USE roadmapDb;
+
+DELETE FROM BlogPostsLocalized;
 DELETE FROM BlogPosts;
 DELETE FROM Users;
 DELETE FROM Languages;

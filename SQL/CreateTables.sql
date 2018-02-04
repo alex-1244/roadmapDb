@@ -120,7 +120,8 @@ CREATE TABLE [UserCredentials](
 	UserId int NOT NULL,
 	LoginName nvarchar(50) NOT NULL,
 	Password nvarchar(50) NOT NULL,
-	CONSTRAINT Fk_UserId_User FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
+	CONSTRAINT Fk_UserId_User FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE,
+	CONSTRAINT Un_UsrLogin UNIQUE (LoginName)
 )
 
 IF OBJECT_ID(N'dbo.RolesPermissions', N'U') IS NOT NULL
