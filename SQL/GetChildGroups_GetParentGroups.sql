@@ -37,3 +37,30 @@ AS
 
 Select * FROM GetParentGroups;
 SELECT * FROM Groups;
+
+GO
+
+DECLARE @BaseGroupId INT
+SET @BaseGroupId = 2
+
+;WITH GetChildGroups(GroupId)
+AS
+(
+	SELECT 
+		Id 
+	FROM 
+		Groups
+	WHERE 
+		ParentGroupId = @BaseGroupId
+	UNION ALL
+		
+	SELECT
+		Id
+	FROM
+		Groups
+	INNER JOIN GetChildGroups
+	ON ParentGroupId = GetChildGroups.GroupId
+)
+
+Select * FROM GetChildGroups;
+SELECT * FROM Groups;
