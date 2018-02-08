@@ -105,14 +105,40 @@ AS
 			ON Id = GetParentGroups.GroupId
 		)
 
-	SELECT DISTINCT Permissions.Id, Permissions.Name FROM
+	SELECT 
+		DISTINCT Permissions.Id, Permissions.Name 
+	FROM
 		Permissions 
-			INNER JOIN RolesPermissions ON Permissions.Id = RolesPermissions.PermissionId
-			WHERE RolesPermissions.IsAllowed = 1
-			AND RolesPermissions.RoleId IN
-	(SELECT DISTINCT RolesForUser.RoleId FROM (SELECT GroupRoles.RoleId FROM GroupRoles INNER JOIN (SELECT DISTINCT GetParentGroups.GroupId FROM GetParentGroups JOIN Groups ON GetParentGroups.GroupId = Groups.Id) as GroupsForUser ON GroupRoles.GroupId = GroupsForUser.GroupId
-	UNION ALL
-	SELECT UserRoles.RoleId FROM UserRoles JOIN Roles ON UserRoles.UserId = @UserId) as RolesForUser)
+	INNER JOIN 
+		RolesPermissions 
+	ON Permissions.Id = RolesPermissions.PermissionId
+	WHERE 
+		RolesPermissions.IsAllowed = 1
+		AND 
+			RolesPermissions.RoleId 
+		IN (SELECT 
+				DISTINCT RolesForUser.RoleId 
+			FROM 
+				(SELECT 
+					GroupRoles.RoleId 
+				FROM 
+					GroupRoles 
+				INNER JOIN 
+					(SELECT 
+						DISTINCT GetParentGroups.GroupId 
+					FROM 
+						GetParentGroups 
+							JOIN Groups ON GetParentGroups.GroupId = Groups.Id
+					) as GroupsForUser 
+				ON GroupRoles.GroupId = GroupsForUser.GroupId
+			UNION ALL
+				SELECT 
+					UserRoles.RoleId 
+				FROM 
+					UserRoles 
+				JOIN Roles 
+				ON UserRoles.UserId = @UserId)
+			as RolesForUser)
 GO
 
 GetUserPermissions 1
