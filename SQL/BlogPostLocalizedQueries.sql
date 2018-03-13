@@ -13,7 +13,8 @@ INSERT INTO Languages(
 	LanguageCode)
 VALUES
 	('en-US'),
-	('ru-RU')
+	('ru-RU'),
+	('sp-SP')
 
 INSERT INTO Users(
 	Firstname,
@@ -43,22 +44,7 @@ VALUES
 	(1, 'en-US', 'English title for first post', 'English body of post number 1'),
 	(1, 'ru-RU', 'Рашн тайтл фор ферст пост', 'Рашин боди для первого поста'),
 	(2, 'en-US', 'English title for second post', 'English body of post number 2'),
-	(1, 'ru-RU', 'Рашн тайтл фор второй пост', 'Рашин боди для второго поста')
-GO
-
-IF object_id('GetBlogPostLocalized') IS NOT NULL
-    DROP PROC GetBlogPostLocalized
-GO
-
-CREATE PROCEDURE dbo.GetBlogPostLocalized 
-	@BlogId int,
-	@Language nvarchar(6)
-AS
-	SELECT bpl.Title, bpl.Body
-		FROM BlogPosts as bp
-			JOIN BlogPostsLocalized as bpl
-			ON bp.Id = bpl.BlogPostId
-	WHERE bpl.BlogPostId = @BlogId AND bpl.LanguageCode = @Language
+	(2, 'ru-RU', 'Рашн тайтл фор второй пост', 'Рашин боди для второго поста')
 GO
 
 IF object_id('GetBlogPostsLocalized') IS NOT NULL
@@ -87,5 +73,20 @@ AS
 	FETCH NEXT @Take ROWS ONLY
 GO
 
-EXEC GetBlogPostLocalized 1, 'en-US';
+IF object_id('GetBlogPostLocalized') IS NOT NULL
+    DROP PROC GetBlogPostLocalized
+GO
+
+CREATE PROCEDURE dbo.GetBlogPostLocalized 
+	@BlogId int
+AS
+	SELECT bp.Id, ln.LanguageCode, bpl.Title, bpl.Body
+		FROM BlogPosts as bp
+			RIGHT JOIN Languages as ln ON 1=1
+			LEFT JOIN BlogPostsLocalized as bpl 
+				ON bpl.BlogPostId = bp.Id AND bpl.LanguageCode = ln.LanguageCode
+	WHERE bp.Id = @BlogId
+GO
+
+EXEC GetBlogPostLocalized 1;
 EXEC dbo.GetBlogPostsLocalized 'en-US';
