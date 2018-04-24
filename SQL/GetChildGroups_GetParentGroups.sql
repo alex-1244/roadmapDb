@@ -1,3 +1,5 @@
+-- 6, 7
+
 USE roadmapDb;
 
 DBCC CHECKIDENT ('[Groups]', RESEED, 0);

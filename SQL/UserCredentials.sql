@@ -1,3 +1,5 @@
+-- 3, 4
+
 DELETE FROM UserCredentials;
 
 IF object_id('CreateUserCredentials') IS NOT NULL

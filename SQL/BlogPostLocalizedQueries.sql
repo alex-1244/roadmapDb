@@ -1,4 +1,6 @@
-﻿USE roadmapDb;
+﻿-- 1, 2
+
+USE roadmapDb;
 
 DELETE FROM BlogPostsLocalized;
 DELETE FROM BlogPosts;

@@ -1,3 +1,5 @@
+-- 8
+
 USE roadmapDb;
 
 DELETE FROM UserGroups
