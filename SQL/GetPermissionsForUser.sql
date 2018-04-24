@@ -7,6 +7,7 @@ DELETE FROM Permissions
 DELETE FROM UserGroups
 DELETE FROM UserRoles
 DELETE FROM GroupRoles
+DELETE FROM Roles
 
 DBCC CHECKIDENT ('[Permissions]', RESEED, 0);
 
@@ -80,23 +81,52 @@ IF object_id('GetUserPermissions') IS NOT NULL
     DROP PROC GetUserPermissions
 GO
 
-CREATE PROCEDURE dbo.GetUserPermissions
-	@UserId int
-AS
-	Declare @GroupIds TABLE (Id INT);
-	INSERT @GroupIds Select UserGroups.GroupId FROM UserGroups WHERE UserGroups.UserId = @UserId
+IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID = OBJECT_ID(N'[GetUserRoles]') AND type IN (N'IF')) 
+BEGIN 
+   DROP FUNCTION dbo.GetUserRoles 
+END 
+GO
 
-	;WITH GetParentGroups(GroupId)
-		AS
-		(
-			SELECT Id FROM @GroupIds
+CREATE FUNCTION dbo.GetUserRoles(@UserId AS INT)  
+RETURNS TABLE 
+AS 
+RETURN (
+	SELECT 
+		DISTINCT RolesForUser.RoleId 
+	FROM (
+		SELECT * FROM dbo.GetUserGroupRoles(@UserId)
+	UNION ALL
+		SELECT 
+			UserRoles.RoleId 
+		FROM 
+			UserRoles 
+		JOIN Roles 
+		ON UserRoles.UserId = @UserId
+	)
+	as RolesForUser
+)
+GO
+
+IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID = OBJECT_ID(N'[GetUserGroupRoles]') AND type IN (N'IF')) 
+BEGIN 
+   DROP FUNCTION dbo.GetUserGroupRoles 
+END 
+GO
+
+CREATE FUNCTION dbo.GetUserGroupRoles(@UserId AS INT)  
+RETURNS TABLE 
+AS 
+RETURN (	
+	WITH GetParentGroups(GroupId)
+		AS (
+			SELECT UserGroups.GroupId FROM UserGroups WHERE UserGroups.UserId = @UserId
 			UNION ALL
 			SELECT 
 				ParentGroupId 
 			FROM 
 				Groups
 			WHERE 
-				ParentGroupId IN (SELECT ParentGroupId FROM Groups WHERE Id IN (SELECT Id From @GroupIds))
+				ParentGroupId IN (SELECT ParentGroupId FROM Groups WHERE Id IN (SELECT UserGroups.GroupId FROM UserGroups WHERE UserGroups.UserId = @UserId))
 			UNION ALL
 				
 			SELECT
@@ -107,6 +137,23 @@ AS
 			ON Id = GetParentGroups.GroupId
 		)
 
+		SELECT 
+			GroupRoles.RoleId 
+		FROM 
+			GroupRoles 
+		INNER JOIN 
+			(SELECT 
+				DISTINCT GetParentGroups.GroupId 
+			FROM 
+				GetParentGroups 
+			JOIN Groups ON GetParentGroups.GroupId = Groups.Id) as GroupsForUser 
+		ON GroupRoles.GroupId = GroupsForUser.GroupId
+)
+GO
+
+CREATE PROCEDURE dbo.GetUserPermissions
+	@UserId int
+AS
 	SELECT 
 		DISTINCT Permissions.Id, Permissions.Name 
 	FROM
@@ -118,29 +165,9 @@ AS
 		RolesPermissions.IsAllowed = 1
 		AND 
 			RolesPermissions.RoleId 
-		IN (SELECT 
-				DISTINCT RolesForUser.RoleId 
-			FROM 
-				(SELECT 
-					GroupRoles.RoleId 
-				FROM 
-					GroupRoles 
-				INNER JOIN 
-					(SELECT 
-						DISTINCT GetParentGroups.GroupId 
-					FROM 
-						GetParentGroups 
-							JOIN Groups ON GetParentGroups.GroupId = Groups.Id
-					) as GroupsForUser 
-				ON GroupRoles.GroupId = GroupsForUser.GroupId
-			UNION ALL
-				SELECT 
-					UserRoles.RoleId 
-				FROM 
-					UserRoles 
-				JOIN Roles 
-				ON UserRoles.UserId = @UserId)
-			as RolesForUser)
+		IN (
+			SELECT * FROM GetUserGroupRoles(@UserId)
+		)
 GO
 
 GetUserPermissions 1

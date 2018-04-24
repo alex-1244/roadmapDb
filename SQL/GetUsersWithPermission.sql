@@ -2,6 +2,7 @@
 
 USE roadmapDb;
 
+DELETE FROM BlogPosts
 DELETE FROM RolesPermissions
 DELETE FROM Permissions
 DELETE FROM UserGroups
@@ -77,95 +78,44 @@ VALUES
 	(6, 3)
 GO
 
-IF object_id('UsersPermissions') IS NOT NULL
-    DROP VIEW UsersPermissions
+IF EXISTS (SELECT * FROM sys.objects WHERE OBJECT_ID = OBJECT_ID(N'[GetUsersRoles]') AND type IN (N'IF')) 
+BEGIN 
+   DROP FUNCTION dbo.GetUsersRoles 
+END 
 GO
 
---CREATE VIEW dbo.UsersPermissions
---AS
---	WITH GetParentGroups(GroupId, UserId)
---		AS
---		(
---			SELECT UserGroups.GroupId, UserGroups.UserId FROM UserGroups
---			UNION ALL
---			SELECT 
---				Groups.ParentGroupId, UserGroups.UserId 
---			FROM 
---				Groups JOIN UserGroups ON Groups.ParentGroupId = UserGroups.GroupId OR Groups.Id = UserGroups.GroupId
---			WHERE 
---				ParentGroupId IN (SELECT ParentGroupId FROM Groups WHERE Id IN (SELECT Id From UserGroups))
---			UNION ALL
-				
---			SELECT
---				ParentGroupId, GetParentGroups.UserId
---			FROM
---				Groups
---			INNER JOIN GetParentGroups
---			ON Id = GetParentGroups.GroupId
---		)
+CREATE FUNCTION dbo.GetUsersRoles() 
+RETURNS TABLE 
+AS 
+RETURN (
+WITH GetParentGroups(GroupId, UserId)
+	AS
+	(
+		SELECT UserGroups.GroupId, UserGroups.UserId FROM UserGroups
+		UNION ALL
+		SELECT 
+			Groups.ParentGroupId, UserGroups.UserId 
+		FROM 
+			Groups JOIN UserGroups ON Groups.ParentGroupId = UserGroups.GroupId OR Groups.Id = UserGroups.GroupId
+		WHERE 
+			ParentGroupId IN (SELECT ParentGroupId FROM Groups WHERE Id IN (SELECT Id From UserGroups))
+		UNION ALL
+			
+		SELECT
+			ParentGroupId, GetParentGroups.UserId
+		FROM
+			Groups
+		INNER JOIN GetParentGroups
+		ON Id = GetParentGroups.GroupId
+	)
 
---	SELECT 
---		DISTINCT Permissions.Id, Permissions.Name 
---	FROM
---		Permissions 
---	INNER JOIN 
---		RolesPermissions 
---	ON Permissions.Id = RolesPermissions.PermissionId
---	WHERE 
---		RolesPermissions.IsAllowed = 1
---		AND 
---			RolesPermissions.RoleId 
---		IN (SELECT 
---				DISTINCT RolesForUser.RoleId, RolesForUser.UserId
---			FROM 
---				(SELECT 
---					GroupRoles.RoleId, GroupsForUser.UserId
---				FROM 
---					GroupRoles 
---				INNER JOIN 
---					(SELECT 
---						DISTINCT GetParentGroups.GroupId, GetParentGroups.UserId
---					FROM 
---						GetParentGroups 
---							JOIN Groups ON GetParentGroups.GroupId = Groups.Id
---					) as GroupsForUser 
---				ON GroupRoles.GroupId = GroupsForUser.GroupId
---			UNION ALL
---				SELECT 
---					UserRoles.RoleId, UserRoles.UserId
---				FROM 
---					UserRoles)
---			as RolesForUser)
---GO
-
---SELECT * FROM UsersPermissions
-
-
-
-
-
-
-
-;WITH GetParentGroups(GroupId, UserId)
-		AS
-		(
-			SELECT UserGroups.GroupId, UserGroups.UserId FROM UserGroups
-			UNION ALL
-			SELECT 
-				Groups.ParentGroupId, UserGroups.UserId 
-			FROM 
-				Groups JOIN UserGroups ON Groups.ParentGroupId = UserGroups.GroupId OR Groups.Id = UserGroups.GroupId
-			WHERE 
-				ParentGroupId IN (SELECT ParentGroupId FROM Groups WHERE Id IN (SELECT Id From UserGroups))
-			UNION ALL
-				
-			SELECT
-				ParentGroupId, GetParentGroups.UserId
-			FROM
-				Groups
-			INNER JOIN GetParentGroups
-			ON Id = GetParentGroups.GroupId
-		)
+SELECT 
+	DISTINCT GetParentGroups.GroupId, GetParentGroups.UserId
+FROM 
+	GetParentGroups 
+		JOIN Groups ON GetParentGroups.GroupId = Groups.Id
+)
+GO
 
 SELECT 
 	DISTINCT RolesForUser.UserId, RolesPermissions.PermissionId, RolesPermissions.IsAllowed
@@ -177,12 +127,7 @@ FROM
 	FROM 
 		GroupRoles 
 	INNER JOIN 
-		(SELECT 
-			DISTINCT GetParentGroups.GroupId, GetParentGroups.UserId
-		FROM 
-			GetParentGroups 
-				JOIN Groups ON GetParentGroups.GroupId = Groups.Id
-		) as GroupsForUser 
+		GetUsersRoles() as GroupsForUser
 	ON GroupRoles.GroupId = GroupsForUser.GroupId
 UNION ALL
 	SELECT 
