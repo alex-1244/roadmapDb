@@ -25,11 +25,11 @@ CREATE PROCEDURE dbo.ValidateUserCredentials
 	@Login nvarchar(50),
 	@Password nvarchar(50)
 AS
-	IF((SELECT COUNT(*) FROM	
+	IF(EXISTS (SELECT * FROM	
 			UserCredentials as uc
 		WHERE
 			uc.LoginName = @Login
-			AND uc.Password = CONVERT(VARCHAR(32),HashBytes('SHA2_512', @Password),2)) = 1)
+			AND uc.Password = CONVERT(VARCHAR(32),HashBytes('SHA2_512', @Password),2)))
 	BEGIN
 		RETURN
 	END ELSE BEGIN
