@@ -21,34 +21,22 @@ GO
 
 CREATE TRIGGER Delete_Child_Groups ON Groups INSTEAD OF DELETE
 AS
-	CREATE TABLE #GroupsToDelete(
-        Id    INT
-    )
-    INSERT INTO #GroupsToDelete (Id)
-    SELECT  Id
-    FROM    deleted
 
 ;WITH GetChildGroups(GroupId)
 AS
 (
-	SELECT 
-		Id 
-	FROM 
-		Groups
-	WHERE 
-		ParentGroupId IN (SELECT Id FROM #GroupsToDelete)
+	SELECT Id 
+		FROM Groups
+		WHERE ParentGroupId IN (SELECT Id FROM deleted)
 	UNION ALL
-		
-	SELECT
-		Id
-	FROM
-		Groups
-	INNER JOIN GetChildGroups
-	ON ParentGroupId = GetChildGroups.GroupId
+	SELECT Id
+		FROM Groups
+			INNER JOIN GetChildGroups
+			ON ParentGroupId = GetChildGroups.GroupId
 )
 
 	DELETE FROM Groups
-	WHERE (Groups.Id in (SELECT GroupId FROM GetChildGroups)) OR (Groups.Id IN (SELECT Id FROM #GroupsToDelete))
+	WHERE (Groups.Id in (SELECT GroupId FROM GetChildGroups)) OR (Groups.Id IN (SELECT Id FROM deleted))
 
 GO
 
