@@ -30,8 +30,11 @@ AS
     SELECT  Id
     FROM    deleted
 
-	DECLARE @c INT
-    SET @c = (SELECT COUNT(*) FROM Groups WHERE ParentGroupId IN (Select Id FROM deleted))
+	DECLARE @c BIT
+    SET @c = CASE WHEN EXISTS (SELECT * FROM Groups WHERE ParentGroupId IN (Select Id FROM deleted))
+	THEN 1 
+	ELSE 0
+	END
 
 	WHILE @c<>0 BEGIN
 		INSERT INTO #GroupsToDelete
@@ -41,8 +44,8 @@ AS
 			AND Groups.ParentGroupId IN (SeLECT Id FROM #GroupsToDelete)
 			AND Groups.Id NOT IN (SeLECT Id FROM #GroupsToDelete)
 		;
-		SELECT @c = (SELECT COUNT(*) FROM Groups WHERE ParentGroupId IN (Select Id FROM #GroupsToDelete) 
-			AND Groups.Id NOT IN (SeLECT Id FROM #GroupsToDelete))
+		SELECT @c = CASE WHEN EXISTS (SELECT * FROM Groups WHERE ParentGroupId IN (Select Id FROM #GroupsToDelete)
+			AND Groups.Id NOT IN (SeLECT Id FROM #GroupsToDelete)) THEN 1 ELSE 0 END
 	END
 
 	DELETE FROM Groups
