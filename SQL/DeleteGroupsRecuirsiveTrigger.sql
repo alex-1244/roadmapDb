@@ -19,8 +19,6 @@ VALUES
 	(NULL, 'AnotherBase')
 GO
 
-
-
 CREATE TRIGGER Delete_Child_Groups ON Groups INSTEAD OF DELETE
 AS
 	CREATE TABLE #GroupsToDelete(
@@ -30,27 +28,29 @@ AS
     SELECT  Id
     FROM    deleted
 
-	DECLARE @c BIT
-    SET @c = CASE WHEN EXISTS (SELECT * FROM Groups WHERE ParentGroupId IN (Select Id FROM deleted))
-	THEN 1 
-	ELSE 0
-	END
-
-	WHILE @c<>0 BEGIN
-		INSERT INTO #GroupsToDelete
-		SELECT Groups.Id
-		FROM Groups
-		WHERE Groups.ParentGroupId IS NOT NULL
-			AND Groups.ParentGroupId IN (SeLECT Id FROM #GroupsToDelete)
-			AND Groups.Id NOT IN (SeLECT Id FROM #GroupsToDelete)
-		;
-		SELECT @c = CASE WHEN EXISTS (SELECT * FROM Groups WHERE ParentGroupId IN (Select Id FROM #GroupsToDelete)
-			AND Groups.Id NOT IN (SeLECT Id FROM #GroupsToDelete)) THEN 1 ELSE 0 END
-	END
+;WITH GetChildGroups(GroupId)
+AS
+(
+	SELECT 
+		Id 
+	FROM 
+		Groups
+	WHERE 
+		ParentGroupId IN (SELECT Id FROM #GroupsToDelete)
+	UNION ALL
+		
+	SELECT
+		Id
+	FROM
+		Groups
+	INNER JOIN GetChildGroups
+	ON ParentGroupId = GetChildGroups.GroupId
+)
 
 	DELETE FROM Groups
-	WHERE Groups.Id in (SELECT Id FROM #GroupsToDelete)
+	WHERE (Groups.Id in (SELECT GroupId FROM GetChildGroups)) OR (Groups.Id IN (SELECT Id FROM #GroupsToDelete))
+
 GO
 
-DELETE FROM Groups
+	DELETE FROM Groups
 	WHERE Id = 1
