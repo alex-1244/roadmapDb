@@ -1,6 +1,6 @@
 ﻿-- 1, 2
 
-USE roadmapDb;
+USE roadmapDB;
 
 DELETE FROM BlogPostsLocalized;
 DELETE FROM BlogPosts;
@@ -56,20 +56,13 @@ GO
 CREATE PROCEDURE dbo.GetBlogPostsLocalized
 	@Language nvarchar(6),
 	@Skip int = 0,
-	@Take int = 0
+	@Take int = 100
 AS
-	IF @Take = 0
-	BEGIN
-		select @Take = Count(*) + 1 FROM BlogPosts
-	END
-
-	DECLARE @MaxNumber int
-	select @MaxNumber = Count(*) FROM BlogPosts
-	SELECT bpl.Title, bpl.Body
+	SELECT bp.Id, bpl.Title, bpl.Body
 		FROM BlogPosts as bp
-			JOIN BlogPostsLocalized as bpl
+			LEFT JOIN BlogPostsLocalized as bpl
 			ON bp.Id = bpl.BlogPostId
-	WHERE bpl.LanguageCode = @Language
+	WHERE bpl.LanguageCode = @Language OR bpl.LanguageCode IS NULL
 	ORDER BY bp.Id
 	OFFSET     @Skip ROWS      
 	FETCH NEXT @Take ROWS ONLY
@@ -84,11 +77,11 @@ CREATE PROCEDURE dbo.GetBlogPostLocalized
 AS
 	SELECT bp.Id, ln.LanguageCode, bpl.Title, bpl.Body
 		FROM BlogPosts as bp
-			RIGHT JOIN Languages as ln ON 1=1
+			CROSS JOIN Languages as ln
 			LEFT JOIN BlogPostsLocalized as bpl 
 				ON bpl.BlogPostId = bp.Id AND bpl.LanguageCode = ln.LanguageCode
 	WHERE bp.Id = @BlogId
 GO
 
-EXEC GetBlogPostLocalized 1;
 EXEC dbo.GetBlogPostsLocalized 'en-US';
+EXEC GetBlogPostLocalized 1;
